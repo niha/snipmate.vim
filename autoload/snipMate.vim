@@ -168,6 +168,14 @@ fun s:BuildTabStops(snip, lnum, col, indent)
 	return [snipPos, i - 1]
 endf
 
+fun snipMate#jumpNextTabStop()
+	jumpTabStop(0)
+endf
+
+fun snipMate#jumpPreviousTabStop()
+	jumpTabStop(1)
+endf
+
 fun snipMate#jumpTabStop(backwards)
 	let leftPlaceholder = exists('s:origWordLen')
 	                      \ && s:origWordLen != g:snipPos[s:curPos][2]

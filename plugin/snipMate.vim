@@ -97,7 +97,7 @@ endf
 fun! ReloadSnippets(ft)
 	let ft = a:ft == '' ? '_' : a:ft
 	call ResetSnippets(ft)
-	call GetSnippets(g:snippets_dir, ft)
+	call CreateSnippets(g:snippets_dir, ft)
 endf
 
 " Reload snippets for all filetypes.
@@ -108,22 +108,21 @@ fun! ReloadAllSnippets()
 endf
 
 let g:did_ft = {}
-fun! GetSnippets(dir, filetypes)
+fun! CreateSnippets(dir, filetypes)
 	for ft in split(a:filetypes, '\.')
 		if has_key(g:did_ft, ft) | continue | endif
-		call s:DefineSnips(a:dir, ft, ft)
+		call s:DefineSnips(a:dir, ft)
 		let g:did_ft[ft] = 1
 	endfor
 endf
 
-" Define "aliasft" snippets for the filetype "realft".
-fun s:DefineSnips(dir, aliasft, realft)
+fun s:DefineSnips(dir, filetype)
 	let snippet_paths = split(globpath(a:dir, "*.snippets"), '\n')
 	for path in snippet_paths
 		let types = split(fnamemodify(path, ':t:r'), '\.')
 		for type in types
-			if type == a:aliasft || type =~ "^" . a:aliasft . "-*"
-				call ExtractSnipsFile(path, a:realft)
+			if type == a:filetype || type =~ "^" . a:filetype . "-*"
+				call ExtractSnipsFile(path, a:filetype)
 				break
 			endif
 		endfor
@@ -147,7 +146,7 @@ fun! TriggerSnippet()
 		call feedkeys("\<tab>") | return ''
 	endif
 
-	if exists('g:snipPos') | return snipMate#jumpTabStop(0) | endif
+	if exists('g:snipPos') | return snipMate#jumpNextTabStop() | endif
 
 	let word = matchstr(getline('.'), '\S\+\%'.col('.').'c')
 	for scope in [bufnr('%')] + split(&ft, '\.') + ['_']
@@ -169,7 +168,7 @@ fun! TriggerSnippet()
 endf
 
 fun! BackwardsSnippet()
-	if exists('g:snipPos') | return snipMate#jumpTabStop(1) | endif
+	if exists('g:snipPos') | return snipMate#jumpPreviousTabStop() | endif
 
 	if exists('g:SuperTabMappingForward')
 		if g:SuperTabMappingBackward == "<s-tab>"
@@ -230,7 +229,7 @@ fun! ShowAvailableSnips()
 	let matches = []
 	for scope in [bufnr('%')] + split(&ft, '\.') + ['_']
 		let triggers = has_key(s:snippets, scope) ? keys(s:snippets[scope]) : []
-		if has_key(s:multi_snips, scope)
+		if has_key(s:multi_snips, scope) != -1
 			let triggers += keys(s:multi_snips[scope])
 		endif
 		for trigger in triggers
