@@ -29,7 +29,7 @@ fun! s:MakeSnip(scope, trigger, content)
 		let s:snippets[a:scope] = {}
 	endif
 	if !has_key(s:snippets[a:scope], a:trigger)
-		et s:snippets[a:scope][a:trigger] = a:content
+		let s:snippets[a:scope][a:trigger] = a:content
 	else
 		echom 'Warning in snipMate.vim: Snippet '.a:trigger.' is already defined.'
 				\ .' See :h multi_snip for help on snippets with multiple matches.'
