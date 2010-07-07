@@ -112,19 +112,21 @@ fun! GetSnippets(dir, filetypes)
 	for ft in split(a:filetypes, '\.')
 		if has_key(g:did_ft, ft) | continue | endif
 		call s:DefineSnips(a:dir, ft, ft)
-		if ft == 'objc' || ft == 'cpp' || ft == 'cs'
-			call s:DefineSnips(a:dir, 'c', ft)
-		elseif ft == 'xhtml'
-			call s:DefineSnips(a:dir, 'html', 'xhtml')
-		endif
 		let g:did_ft[ft] = 1
 	endfor
 endf
 
 " Define "aliasft" snippets for the filetype "realft".
 fun s:DefineSnips(dir, aliasft, realft)
-	for path in split(globpath(a:dir, a:aliasft.'.snippets')."\n".globpath(a:dir, a:aliasft.'-*.snippets'), "\n")
-		call ExtractSnipsFile(path, a:realft)
+	let snippet_paths = split(globpath(a:dir, "*.snippets"), '\n')
+	for path in snippet_paths
+		let types = split(fnamemodify(path, ':t:r'), '\.')
+		for type in types
+			if type == a:aliasft || type =~ "^" . a:aliasft . "-*"
+				call ExtractSnipsFile(path, a:realft)
+				break
+			endif
+		endfor
 	endfor
 endf
 
