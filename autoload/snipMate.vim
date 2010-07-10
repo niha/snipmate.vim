@@ -169,11 +169,11 @@ fun s:BuildTabStops(snip, lnum, col, indent)
 endf
 
 fun snipMate#jumpNextTabStop()
-	jumpTabStop(0)
+	call snipMate#jumpTabStop(0)
 endf
 
 fun snipMate#jumpPreviousTabStop()
-	jumpTabStop(1)
+	call snipMate#jumpTabStop(1)
 endf
 
 fun snipMate#jumpTabStop(backwards)
