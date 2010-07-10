@@ -196,7 +196,11 @@ fun s:GetSnippet(word, scope)
 			if snippet == '' | break | endif
 		else
 			if match(word, '\W') == -1 | break | endif
-			let word = substitute(word, '.\{-}\W', '', '')
+      if match(word, '^\w') != -1
+        let word = substitute(word, '^\w*', '', '')
+      else
+        let word = substitute(word, '^\W', '', '')
+      endif
 		endif
 	endw
 	if word == '' && a:word != '.' && stridx(a:word, '.') != -1
