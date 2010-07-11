@@ -121,7 +121,7 @@ fun s:DefineSnips(dir, filetype)
 	for path in snippet_paths
 		let types = split(fnamemodify(path, ':t:r'), '\.')
 		for type in types
-			if type == a:filetype || type =~ "^" . a:filetype . "-*"
+			if type == a:filetype || type =~ "^" . a:filetype . "-.*"
 				call ExtractSnipsFile(path, a:filetype)
 				break
 			endif
