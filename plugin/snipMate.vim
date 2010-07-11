@@ -116,7 +116,7 @@ fun! CreateSnippets(dir, filetypes)
 	endfor
 endf
 
-fun s:DefineSnips(dir, filetype)
+fun! s:DefineSnips(dir, filetype)
 	let snippet_paths = split(globpath(a:dir, "*.snippets"), '\n')
 	for path in snippet_paths
 		let types = split(fnamemodify(path, ':t:r'), '\.')
@@ -184,41 +184,84 @@ fun! BackwardsSnippet()
 	return "\<s-tab>"
 endf
 
-" Check if word under cursor is snippet trigger; if it isn't, try checking if
-" the text after non-word characters is (e.g. check for "foo" in "bar.foo")
-fun s:GetSnippet(word, scope)
-	let word = a:word | let snippet = ''
-	while snippet == ''
-		if exists('s:snippets["'.a:scope.'"]["'.escape(word, '\"').'"]')
-			let snippet = s:snippets[a:scope][word]
-		elseif exists('s:multi_snips["'.a:scope.'"]["'.escape(word, '\"').'"]')
-			let snippet = s:ChooseSnippet(a:scope, word)
-			if snippet == '' | break | endif
-		else
-			if match(word, '\W') == -1 | break | endif
-      if match(word, '^\w') != -1
-        let word = substitute(word, '^\w*', '', '')
-      else
-        let word = substitute(word, '^\W', '', '')
-      endif
-		endif
-	endw
-	if word == '' && a:word != '.' && stridx(a:word, '.') != -1
-		let [word, snippet] = s:GetSnippet('.', a:scope)
-	endif
-	return [word, snippet]
+fun! s:CreateSubstitutes(word)
+	let words = []
+	let word = a:word
+	while !empty(word)
+		call add(words, word)
+		let word = substitute(word, '\(^\w\+\|^\W\+\)', '', '')
+	endwhile
+	return words
 endf
 
-fun s:ChooseSnippet(scope, trigger)
-	let snippet = []
-	let i = 1
-	for snip in s:multi_snips[a:scope][a:trigger]
-		let snippet += [i.'. '.snip[0]]
-		let i += 1
+fun! s:GetSnippet(word, scope)
+	if !has_key(s:snippets, a:scope) && !has_key(s:multi_snips, a:scope)
+		return ['', '']
+	endif
+	
+	let snippets = get(s:snippets, a:scope, {})
+	let multi_snips = get(s:multi_snips, a:scope, {})
+	
+	let words = s:CreateSubstitutes(a:word)
+	if empty(words) | return ['', ''] | endif
+	
+	let word_and_snippet = []
+	
+	for word in words
+		if has_key(snippets, escape(word, '\"'))
+			let word_and_snippet = [word, snippets[word]]
+			return word_and_snippet
+		elseif has_key(multi_snips, escape(word, '\"'))
+			let word_and_snippet = [word, s:ChooseMultiSnippet(a:scope, word)]
+			return word_and_snippet
+		endif
 	endfor
-	if i == 2 | return s:multi_snips[a:scope][a:trigger][0][1] | endif
-	let num = inputlist(snippet) - 1
-	return num == -1 ? '' : s:multi_snips[a:scope][a:trigger][num][1]
+	
+	let last_word = words[-1]
+	return [last_word, s:ChooseSnippet(a:scope, last_word)]
+endf
+
+fun! s:SelectList(lines)
+	let i = inputlist(map(copy(a:lines), 'v:key + 1 . ". " . v:val')) - 1
+	return 0 <= i && i < len(a:lines) ? i : -1
+endf
+
+fun! s:ChooseSnippet(scope, trigger)
+	let escaped = escape(a:trigger, '\"')
+
+	let triggers = []
+	let snippets = []
+
+	if has_key(s:snippets, a:scope)
+		let single_triggers = filter(copy(s:snippets[a:scope]), 'v:key =~ "^' . escaped . '"')
+		let triggers = keys(single_triggers)
+		let snippets = values(single_triggers)
+	endif
+
+	if has_key(s:multi_snips, a:scope)
+		let multi_triggers = filter(copy(s:multi_snips[a:scope]), 'v:key =~ "^' . escaped . '"')
+		for [trigger, descs_and_snippets] in items(multi_triggers)
+			for [desc, snippet] in descs_and_snippets
+				call add(triggers, trigger . " " . desc)
+				call add(snippets, snippet)
+			endfor
+		endfor
+	endif
+
+	if empty(triggers) | return '' | endif
+	if len(triggers) == 1 | return snippets[0] | endif
+
+	let i = s:SelectList(triggers)
+	return i == -1 ? '' : snippets[i]
+endf
+
+fun! s:ChooseMultiSnippet(scope, trigger)
+	let snippets = s:multi_snips[a:scope][a:trigger]
+
+	if len(snippets) == 1 | return snippets[0][1] | endif
+
+	let i = s:SelectList(map(copy(snippets), 'v:val[0]'))
+	return i == -1 ? '' : snippets[i][1]
 endf
 
 fun! ShowAvailableSnips()
